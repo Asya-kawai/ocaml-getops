@@ -51,6 +51,8 @@ module BoolOption = struct
       value;
     }
   let set_short t short_option = { t with short = short_option }
+  let set_long t long_option = { t with long = long_option }
+  let set_value t value = { t with value = value }
 end
 
 module BoolOption2 = struct
@@ -76,7 +78,46 @@ module Option = struct
     | None
   let show ?(options=[]) ?(t=None) () = t
 end
-let set_option ?(options=[]) 
+(** How to use;;;;
+    Option.show ~t:(Option.Bool (BoolOption.create ())) ();;
+*)
+
+let is_short_option ~option_str =
+  let str_len = String.length option_str in
+  if (str_len != 2) then false (* Invaild short option *)
+  else (
+    if option_str.[0] = '-' && option_str.[1] != '-' then true
+    else false
+  )
+
+let is_long_option ~option_str = 
+  let str_len = String.length option_str in
+  (* This is short option or invalid option *)
+  if (str_len <= 2) then false
+  else (
+    if option_str.[0] = '-' && option_str.[1] = '-' &&
+       option_str.[2] != '-' then true
+    else false
+  )
+
+let set_option ~options ~option_type =
+  (* options array converts to list *)
+  let opts = Array.to_list(options) in
+  let rec _get_options opts =
+    match opts with
+    | [] -> option_type
+    | opt1 :: [] -> 
+      if opt1 = option_type.short then
+        option_type.set_value true
+      else
+        _get_options []
+    | opt1 :: opt2 :: opt_rest ->
+      let str_len = String.length opt in
+      if (opt.[0] = '-') && opt = ("-" ^ option_type.short) then
+        option_type.set_value option_type opt_value
+      else        
+        _get_options opt_rest
+  in _get_options opts 
 
 let parse opts others args first last =
   let find_long opt =
@@ -158,7 +199,7 @@ let parse_options options =
   (* こんな感じで使えると良いな *)
   let opt_of_verbose = BoolOption.create ~short:"v" ~long:"verbose" () in
   (* set_opt: コマンドライン引数 -> セットしたいオプション型 -> 値が設定されたオプション型 *)
-  let verbose = set_opts options opt_of_verbose in
+  let verbose = set_opt options opt_of_verbose in
   ...
   
 
