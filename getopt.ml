@@ -50,6 +50,7 @@ module BoolOption = struct
       long;
       value;
     }
+  let show t = t
   let set_short t short_option = { t with short = short_option }
   let set_long t long_option = { t with long = long_option }
   let set_value t value = { t with value = value }
@@ -67,6 +68,7 @@ module BoolOption2 = struct
       long;
       value;
     }
+  let show t = t
   let set_short t short_option = { t with short = short_option }
 end
 
@@ -81,6 +83,12 @@ end
 (** How to use;;;;
     Option.show ~t:(Option.Bool (BoolOption.create ())) ();;
 *)
+
+let a = function
+  | Option.Bool x  -> Option.Bool { x with value = true }
+  | Option.Bool2 x -> Option.Bool2 { x with value = false }
+  | Option.None -> Option.None
+
 
 let is_short_option ~option_str =
   let str_len = String.length option_str in
@@ -106,16 +114,17 @@ let set_option ~options ~option_type =
   let rec _get_options opts =
     match opts with
     | [] -> option_type
-    | opt1 :: [] -> 
-      if opt1 = option_type.short then
-        option_type.set_value true
-      else
-        _get_options []
+    | opt1 :: [] -> (
+        match option_type with
+        | Option.Bool x -> 
+          { x with value = true }
+        | _ -> option_type
+      )
     | opt1 :: opt2 :: opt_rest ->
       let str_len = String.length opt in
       if (opt.[0] = '-') && opt = ("-" ^ option_type.short) then
         option_type.set_value option_type opt_value
-      else        
+      else
         _get_options opt_rest
   in _get_options opts 
 
