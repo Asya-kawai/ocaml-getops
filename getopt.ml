@@ -50,45 +50,126 @@ module BoolOption = struct
       long;
       value;
     }
-  let show t = t
   let set_short t short_option = { t with short = short_option }
   let set_long t long_option = { t with long = long_option }
   let set_value t value = { t with value = value }
 end
 
-module BoolOption2 = struct
+module StringOption = struct
   type t = {
     short: string;
     long: string;
-    value: bool;
+    value: string;
   }
-  let create ?(short="") ?(long="") ?(value=false) () =
+  let create ?(short="") ?(long="") ?(value="") () =
     {
       short;
       long;
       value;
     }
-  let show t = t
   let set_short t short_option = { t with short = short_option }
+  let set_long t long_option = { t with long = long_option }
+  let set_value t value = { t with value = value }
+end
+
+module IntOption = struct
+  type t = {
+    short: string;
+    long: string;
+    value: int;
+  }
+  let create ?(short="") ?(long="") ?(value=0) () =
+    {
+      short;
+      long;
+      value;
+    }
+  let set_short t short_option = { t with short = short_option }
+  let set_long t long_option = { t with long = long_option }
+  let set_value t value = { t with value = value }
+end
+
+module FloatOption = struct
+  type t = {
+    short: string;
+    long: string;
+    value: float;
+  }
+  let create ?(short="") ?(long="") ?(value=0.) () =
+    {
+      short;
+      long;
+      value;
+    }
+  let set_short t short_option = { t with short = short_option }
+  let set_long t long_option = { t with long = long_option }
+  let set_value t value = { t with value = value }
+end
+
+(* *)
+module Option = struct
+  type 'a option_t =
+    | Nil
+    | T of {
+      short: string;
+      long: string;
+      value: 'a;
+    }
+  let create ?(short="") ?(long="") ?(value=None) () = 
+    T {
+      short;
+      long;
+      value;
+    }
+  let short ~t  = match t with 
+    | T x -> x.short
+    | Nil -> ""
+  let long ~t = match t with
+    | T x -> x.long
+    | Nil -> ""
+  let value ~t = match t with
+    | T x -> Some x.value
+    | Nil -> None
+  let set_value ~t ~value =
+    match t with
+    | Nil -> Nil
+    | T x -> T { x with value = Some value }
 end
 
 (* options: list *)
 module Option = struct
   type t =
-    | Bool of BoolOption.t
-    | Bool2 of BoolOption2.t
-    | None
-  let show ?(options=[]) ?(t=None) () = t
+    | Bool_t of BoolOption.t
+    | String_t of StringOption.t
+    | Int_t of IntOption.t
+    | Float_t of FloatOption.t
+    | None_t
+  let show ?(options=[]) ?(t=None_t) () = t
+  let set_short ?(t=None_t) ~value =
+    match t with
+    | Bool_t x -> Bool_t { x with short = value }
+    | String_t x -> String_t { x with short = value }
+    | Int_t x -> Int_t { x with short = value }
+    | Float_t x -> Float_t { x with short = value }
+    | None_t -> None_t
+  let set_long ?(t=None_t) ~value =
+    match t with
+    | Bool_t x -> Bool_t { x with long = value }
+    | String_t x -> String_t { x with long = value }
+    | Int_t x -> Int_t { x with long = value }
+    | Float_t x -> Float_t { x with long = value }
+    | None_t -> None_t
+  let set_value ?(t=None_t) ~value =
+    match t with
+    | Bool_t x -> Bool_t { x with value = (bool_of_string value) }
+    | String_t x -> String_t { x with value = value }
+    | Int_t x -> Int_t { x with value = (int_of_string value) }
+    | Float_t x -> Float_t { x with value = (float_of_string value) }
+    | None_t -> None_t
 end
 (** How to use;;;;
     Option.show ~t:(Option.Bool (BoolOption.create ())) ();;
 *)
-
-let a = function
-  | Option.Bool x  -> Option.Bool { x with value = true }
-  | Option.Bool2 x -> Option.Bool2 { x with value = false }
-  | Option.None -> Option.None
-
 
 let is_short_option ~option_str =
   let str_len = String.length option_str in
@@ -116,14 +197,53 @@ let set_option ~options ~option_type =
     | [] -> option_type
     | opt1 :: [] -> (
         match option_type with
-        | Option.Bool x -> 
-          { x with value = true }
-        | _ -> option_type
+        | Option.Bool_t x ->
+          if x.short = opt1 || x.long = opt1 then
+            Option.set_value ~t:option_type ~value:"true"
+          else
+            option_type
+        | _ -> option_type (* No set anything, option invalid perhaps. *)
       )
     | opt1 :: opt2 :: opt_rest ->
-      let str_len = String.length opt in
-      if (opt.[0] = '-') && opt = ("-" ^ option_type.short) then
-        option_type.set_value option_type opt_value
+      let is_option opt = is_short_option opt || is_long_option opt in
+      let is_correct option_type v = match option_type with
+        | Option.Bool_t x -> x.short = v || x.long = v
+        | Option.String_t x -> x.short = v || x.long = v
+        | Option.Int_t x -> x.short = v || x.long = v
+        | Option.Float_t x -> x.short = v || x.long = v
+        | Option.None_t -> false
+      in 
+      if  (is_option opt1) then
+        (* pattern: --option1 --option2 ... *)
+        if (is_option opt2) then
+          match option_type with
+          | Option.Bool_t x ->
+            if is_correct option_type opt1 then
+              Option.set_value ~t:option_type ~value:opt2
+            else
+              _get_options opt_rest
+          | Option.None_t -> option_type
+          | _ -> option_type (* error *)
+        else
+          (* pattern: --option1 value1 ... *)
+          match option_type with
+        | Option.Int_t x ->
+          if is_correct option_type opt1 then
+            Option.set_value ~t:option_type ~value:opt2
+          else
+            _get_options opt_rest
+        | Option.String_t x ->
+          if is_correct option_type opt1 then
+            Option.set_value ~t:option_type ~value:opt2
+          else
+            _get_options opt_rest
+        | Option.Float_t x ->
+          if is_correct option_type opt1 then
+            Option.set_value ~t:option_type ~value:opt2
+          else
+            _get_options opt_rest
+        | Option.Bool_t x -> option_type (* error *)
+        | Option.None_t -> option_type (* error *)
       else
         _get_options opt_rest
   in _get_options opts 
