@@ -17,7 +17,7 @@ git clone https://github.com/Asya-kawai/ocaml-getopt.git
 ## Dependencies
 
 Nothing!  
-This module is realy simple!
+This module is really simple!
 
 ## Usage of Getopt module
 
