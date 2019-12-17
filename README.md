@@ -1,4 +1,4 @@
-## What's is this?
+## What is this?
 Getopt is parser of command_line_arguments.  
 It's consists single module file 'getopt.ml',
 Getopt module includes below.
