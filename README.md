@@ -57,3 +57,14 @@ let () =
   in
   my_prog verbose.value number.value ()
 ```
+
+If get quick-start, do command below.
+
+```
+dune build sample.exe
+
+./_build/default/sample.exe
+verbose_option = true
+number option = 100
+```
+
