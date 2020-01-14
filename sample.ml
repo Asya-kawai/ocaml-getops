@@ -1,4 +1,4 @@
-(* In repl, #use "option/getopt.ml" *)
+(* In repl, #use "getopt.ml" *)
 (**
   If you use ocaml files in others directory,
   copy below script into ./dune.
